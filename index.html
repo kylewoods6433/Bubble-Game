@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Club — just pop.</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f5f0;color:#252c3a;font-family:Arial,sans-serif;overflow:hidden}canvas{display:block;width:100%;height:100%;position:fixed;inset:0;touch-action:none;cursor:crosshair}header{position:fixed;top:36px;left:44px;right:44px;display:flex;align-items:center;justify-content:space-between;pointer-events:none;z-index:2}.brand{font-weight:800;font-size:22px;letter-spacing:-1px}.brand span{color:#ed826d}.pill{border:1px solid #deded8;border-radius:24px;padding:12px 20px;font-size:13px;background:#ffffff9c;display:flex;gap:18px;align-items:center}.pill strong{font-size:20px}.intro{position:fixed;top:115px;left:44px;pointer-events:none;z-index:1}h1{font-size:clamp(40px,6vw,76px);letter-spacing:-4px;line-height:1.05;margin:0 0 14px;font-weight:800}p{font-size:15px;color:#7b8089;margin:0;line-height:1.6}footer{position:fixed;bottom:30px;left:44px;right:44px;display:flex;align-items:center;justify-content:space-between;z-index:2;pointer-events:none}.note{font-size:11px;letter-spacing:2px;color:#8a8c90;text-transform:uppercase}button{pointer-events:auto;background:#fff9;border:1px solid #deded8;border-radius:24px;padding:11px 17px;color:#59616b;cursor:pointer;font:12px Arial}button:hover{background:white}button:focus-visible{outline:3px solid #8fcacb;outline-offset:3px}.actions{display:flex;gap:8px}#announcement{position:absolute;width:1px;height:1px;overflow:hidden} @media(max-width:600px){header{top:24px;left:24px;right:24px}.intro{left:24px;top:105px}h1{letter-spacing:-2px}footer{left:24px;right:24px;bottom:22px}.note{max-width:120px;line-height:1.7}.pill{padding:9px 14px}}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Floating bubbles. Click or tap a bubble to pop it."></canvas>
+<header><div class="brand">bubble<span>club</span> ✳</div><div class="pill">POPPED <strong id="score">0</strong></div></header>
+<div class="intro"><h1>A little less thinking.<br>A little more popping.</h1><p>Click a bubble. Enjoy the pop.<br>No timer. No pressure. Just bubbles.</p></div>
+<footer><span class="note">Small pops. Big peace.</span><div class="actions"><button id="sound" aria-pressed="false">Sound off</button><button id="reset">Start fresh ↻</button></div></footer>
+<div id="announcement" role="status" aria-live="polite"></div>
+<script>
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),scoreEl=document.querySelector('#score');
+const colors=['#f4a18e','#9bcfca','#afbee9','#e8b7d5','#edcd7b','#a9c8ea'];
+let w=0,h=0,bubbles=[],particles=[],labels=[],score=0,last=0,spawn=0,sound=false,audio;
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function resize(){w=innerWidth;h=innerHeight;const d=Math.min(devicePixelRatio||1,2);canvas.width=w*d;canvas.height=h*d;ctx.setTransform(d,0,0,d,0,0);bubbles.forEach(b=>{b.x=Math.min(w-b.r,Math.max(b.r,b.x));b.y=Math.min(h+b.r,b.y)})}
+function add(initial=false){const r=22+Math.random()*43;bubbles.push({x:r+Math.random()*Math.max(0,w-2*r),y:initial?h*.37+Math.random()*h*.56:h+r+10,r,color:colors[Math.floor(Math.random()*colors.length)],speed:15+Math.random()*24,phase:Math.random()*Math.PI*2})}
+function fresh(){bubbles=[];particles=[];labels=[];score=0;scoreEl.textContent=0;for(let i=0;i<18;i++)add(true)}
+function popTone(){if(!sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(650+Math.random()*200,audio.currentTime);o.frequency.exponentialRampToValueAtTime(140,audio.currentTime+.12);g.gain.setValueAtTime(.13,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.14);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.15)}catch{}}
+canvas.addEventListener('pointerdown',e=>{for(let i=bubbles.length-1;i>=0;i--){const b=bubbles[i];if(Math.hypot(e.clientX-(b.drawX??b.x),e.clientY-b.y)<=b.r){bubbles.splice(i,1);scoreEl.textContent=++score;popTone();for(let j=0;j<12;j++){const a=j*Math.PI/6;particles.push({x:b.drawX??b.x,y:b.y,vx:Math.cos(a)*(40+Math.random()*75),vy:Math.sin(a)*(40+Math.random()*75),life:1,color:b.color,r:2+Math.random()*4})}labels.push({x:b.drawX??b.x,y:b.y,life:1,text:['pop!','lovely.','✦','bloop!'][Math.floor(Math.random()*4)]});add();break}}});
+document.querySelector('#sound').onclick=()=>{sound=!sound;document.querySelector('#sound').textContent=sound?'Sound on':'Sound off';document.querySelector('#sound').setAttribute('aria-pressed',sound);if(sound)popTone()};
+document.querySelector('#reset').onclick=()=>{fresh();document.querySelector('#announcement').textContent='Fresh bubbles. Score reset.'};
+function drawBubble(b,t){const x=b.x+(reduced?0:Math.sin(t*.0006+b.phase)*9),y=b.y;b.drawX=x;const fill=ctx.createRadialGradient(x-b.r*.35,y-b.r*.4,1,x,y,b.r);fill.addColorStop(0,'#ffffffdd');fill.addColorStop(.42,b.color+'30');fill.addColorStop(.82,b.color+'65');fill.addColorStop(1,b.color+'a0');ctx.beginPath();ctx.arc(x,y,b.r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=1.4;ctx.strokeStyle=b.color+'cc';ctx.stroke();ctx.beginPath();ctx.ellipse(x-b.r*.3,y-b.r*.36,b.r*.22,b.r*.1,-.7,0,Math.PI*2);ctx.fillStyle='#ffffffc9';ctx.fill();ctx.beginPath();ctx.arc(x,y,b.r*.84,.3,1.2);ctx.strokeStyle='#ffffffaa';ctx.lineWidth=2;ctx.stroke()}
+function frame(t){const dt=Math.min((t-last)/1000||0,.04);last=t;ctx.clearRect(0,0,w,h);spawn+=dt;if(spawn>1.4&&bubbles.length<24){add();spawn=0}for(let i=bubbles.length-1;i>=0;i--){const b=bubbles[i];if(!reduced)b.y-=b.speed*dt;if(b.y<-b.r){bubbles.splice(i,1);add();continue}drawBubble(b,t)}for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt*2;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=80*dt;if(p.life<=0){particles.splice(i,1);continue}ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fill()}for(let i=labels.length-1;i>=0;i--){const l=labels[i];l.life-=dt*1.25;l.y-=25*dt;if(l.life<=0){labels.splice(i,1);continue}ctx.globalAlpha=l.life;ctx.font='bold 17px Arial';ctx.textAlign='center';ctx.fillStyle='#737b89';ctx.fillText(l.text,l.x,l.y)}ctx.globalAlpha=1;requestAnimationFrame(frame)}
+// Keep hit areas aligned with the gentle horizontal drift.
+canvas.addEventListener('pointermove',e=>{canvas.style.cursor=bubbles.some(b=>Math.hypot(e.clientX-(b.drawX??b.x),e.clientY-b.y)<b.r)?'pointer':'crosshair'});
+window.addEventListener('resize',resize);resize();fresh();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
